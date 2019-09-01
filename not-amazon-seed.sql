@@ -44,6 +44,19 @@ VALUES ("Lacrosse Ball", "Health & Personal Care", 5, 100);
 INSERT INTO products (products_name, department_name, price, stock_quantity) 
 VALUES ("Colgate 360 Sensitive Pro Relief", "Oral Hygiene Products", 10, 25);
 
+CREATE TABLE product_sales (
+  product_salesid INT NOT NULL AUTO_INCREMENT,
+  productsid INT NOT NULL,
+  products_name VARCHAR(100) NULL,
+  price INT NULL,
+  stock_quantity INT NULL,
+  date_added datetime default current_timestamp,
+  PRIMARY KEY (product_salesid)
+);
+
+INSERT INTO product_sales (productsid, products_name, price, stock_quantity) 
+VALUES (1, "Alexa Echo Dot Smart Speaker", 30, 15);
+
 -- CREATE TABLE bid (
 --   id INT NOT NULL AUTO_INCREMENT,
 --   products_id INT NOT NULL,
