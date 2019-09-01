@@ -1,0 +1,25 @@
+{
+  "name": "Not-Amazon",
+  "version": "1.0.0",
+  "description": "Amazon-like storefront with the MySQL, inquirer, and more!",
+  "main": "bamazonCustomer.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SarneetGit/Not-Amazon.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/SarneetGit/Not-Amazon/issues"
+  },
+  "homepage": "https://github.com/SarneetGit/Not-Amazon#readme",
+  "dependencies": {
+    "dotenv": "^8.1.0",
+    "inquirer": "^7.0.0",
+    "mysql": "^2.17.1"
+  }
+}
