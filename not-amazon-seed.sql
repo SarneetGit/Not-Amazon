@@ -57,21 +57,33 @@ CREATE TABLE product_sales (
 INSERT INTO product_sales (productsid, products_name, price, stock_quantity) 
 VALUES (1, "Alexa Echo Dot Smart Speaker", 30, 15);
 
--- CREATE TABLE bid (
---   id INT NOT NULL AUTO_INCREMENT,
---   products_id INT NOT NULL,
---   price INT NOT NULL,
---   date_added datetime default current_timestamp,
---   PRIMARY KEY (id)
--- );
+CREATE TABLE departments (
+  departmentsid INT NOT NULL AUTO_INCREMENT,
+  department_name VARCHAR(100) NULL,
+  over_head_costs INT NULL,
+  date_added datetime default current_timestamp,
+  PRIMARY KEY (departmentsid)
+);
 
--- INSERT INTO bid (products_id, price) VALUES (1, 50);
+INSERT INTO departments (department_name, over_head_costs) 
+VALUES ('Electronics', '250');
 
--- CREATE TABLE userpass (
---   id INT NOT NULL AUTO_INCREMENT,
---   username INT NOT NULL,
---   pw INT NOT NULL,
---   date_added datetime default current_timestamp,
---   PRIMARY KEY (id)
--- );
+INSERT INTO departments (department_name, over_head_costs) 
+VALUES ('Beauty', '150');
+
+INSERT INTO departments (department_name, over_head_costs) 
+VALUES ('Gaming', '150');
+
+INSERT INTO departments (department_name, over_head_costs) 
+VALUES ('Health & Personal Care', '150');
+
+INSERT INTO departments (department_name, over_head_costs) 
+VALUES ('Groceries', '100');
+
+INSERT INTO departments (department_name, over_head_costs) 
+VALUES ('Oral Hygiene Products', '75');
+
+INSERT INTO departments (department_name, over_head_costs) 
+VALUES ('Office Supplies', '50');
+
 

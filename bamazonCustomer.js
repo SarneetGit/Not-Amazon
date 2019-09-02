@@ -1,4 +1,5 @@
 require("dotenv").config();
+const ct = require('console.table');
 const inquire = require('inquirer');
 const sql = require('mysql');
 const login = require("./not-password.js");
@@ -11,29 +12,13 @@ const connection = sql.createConnection({
 
 var products = []
 var productsPrompt = []
+var productsNameStock = []
+var productSales = []
 var productID = 0
 var purchaseQuantity = 0
 
-function whatToDo() {
-    inquire.prompt({
-        name: "do",
-        type:"list",
-        choices: ["Purchase a product", "Manager Dashboard", "Sales Metrics"],
-        message: "Welcome to Not-Amazon Inc. What would you like to do today?\n"
-    }).then((answer) => {
-        if (answer.do === 'Purchase a product') {
-            runMakePurchase();
-        }
-        else if (answer.do === 'Manager Dashboard') {
-            //coming soon
-        }
-        else if (answer.do === 'Sales Metrics') {
-            //coming soon
-        }
-    })
-}
 
-function promptViews() {
+function whatToDo() {
     inquire.prompt({
         name: "do",
         type:"list",
@@ -49,6 +34,93 @@ function promptViews() {
         else if (answer.do === 'Sales Metrics') {
             runSalesMetrics();
         }
+    })
+}
+
+function promptViews() {
+    return new Promise (resolve => {
+        inquire.prompt({
+            name: "action",
+            type:"list",
+            choices: ["View Products for Sale", "View Low Inventory", "Add to Inventory","Add New Product"],
+            message: "What would you like to do?\n"
+        }).then((answer) => {
+            if (answer.action === 'View Products for Sale') {
+                console.table(products)
+                resolve([`Done`]);
+            }
+            else if (answer.action === 'View Low Inventory') {
+                for (let i in products) {
+                    if (products[i].Stock <= 5) {
+                        console.log(`The item '${products[i].Name}' is low on stock (${products[i].Stock})!`)
+                    }
+                }
+                resolve([`Done`]);
+            }
+            else if (answer.action === 'Add to Inventory') {
+                inquire.prompt([{
+                    name:'item',
+                    type:'list',
+                    choices : productsNameStock,
+                    message: `Please select an item to place a purchase order for:\n`                
+                    }
+                    ,{
+                    name: 'restockQuant',
+                    type: 'number',
+                    message: `How much would you like to restock?`,
+                    validate: function(answer) {
+                        if (answer > 0) {
+                            return true
+                        }
+                        return `Please select a valid number to restock the item by.`
+                    }
+                }]).then((answers) => {
+                    let id = parseInt(answers.item.match(/Product ID: ([0-9]*) | Product Name:/)[1])
+                    let quant = (answers.restockQuant + products[id-1].Stock)
+                    resolve([`update`, id, quant])
+                })
+            }
+            else if (answer.action === 'Add New Product') {
+                inquire.prompt([{
+                        name:'name',
+                        type:'input',
+                        message: `Please input the item name:\n`                
+                    },
+                    {
+                        name:'department',
+                        type:'input',
+                        message: `Please input the department the item belongs to:\n`                
+                    },
+                    {
+                        name:'price',
+                        type:'number',
+                        message: `Please input the price of the item:\n`,
+                        validate: function(answer) {
+                            if (answer > 0) {
+                                return true
+                            }
+                            return `Please select a valid number to restock the item by.`
+                        }              
+                    },
+                    {
+                        name: 'quantity',
+                        type: 'number',
+                        message: `Please input the quantity of the item to order:`,
+                        validate: function(answer) {
+                            if (answer > 0) {
+                                return true
+                            }
+                            return `Please select a valid number to restock the item by.`
+                        }
+                }]).then((a) => {
+                    // console.log(a)
+                    resolve(['insert', a.name, a.department, a.price, a.quantity])
+                    // connection.query(`INSERT INTO bamazon.products (products_name, department_name, price, stock_quantity) VALUES (? ? ? ?);`, [a.name, a.department, a.price, a.quantity], function(err, resp) {                   
+                    //     console.log(`Your Item has been added!`)                    
+                    // });
+                })
+            }
+        })
     })
 }
 
@@ -69,6 +141,7 @@ function getItems () {
             for (let i of resp){
                 products.push(i)
                 productsPrompt.push(`Product#${i.ProductsID}: '${i.Name}' is on sale at a price of \$${i.Price}. Only ${i.Stock} units remain!`)
+                productsNameStock.push(`Product ID: ${i.ProductsID} | Product Name: ${i.Name} | Stock: ${i.Stock}`)
             }
             //console.log(`Product#${products[0].ProductsID}: '${products[0].Name}' is on sale at a price of \$${products[0].Price}. Only ${products[0].Stock} units remain!`)
             // console.log(productsPrompt)
@@ -134,7 +207,7 @@ async function runMakePurchase() {
         await makeConnection();
         await getItems();
         var choice = await userSelection();
-        productID = parseInt(choice.charAt(8))
+        productID = parseInt(choice.match("Product#(.*):")[1])
         console.log(productID)
         purchaseQuantity = await howManyBuy()
         await placeOrder();
@@ -149,20 +222,63 @@ async function runMakePurchase() {
 async function runManagerDashboard() {
     await makeConnection();
     await getItems();
+    var action = await promptViews();
+    if (action[0] === 'update') {
+        connection.query(`Update bamazon.products SET stock_quantity = ? WHERE productsid = ?;`, [action[2], action[1]], function(err, resp) { 
+            if (err) {
+                console.log(`Error occurred: ${err}`)
+            }          
+            console.log(`The item has been restocked!`)                    
+        })
+    }
+    else if (action[0] === 'insert') {
+        connection.query("INSERT INTO bamazon.products (products_name, department_name, price, stock_quantity) VALUES (?, ?, ?, ?);", [action[1], action[2], action[3], action[4]], function(err, resp) {                   
+            if (err) {
+                console.log(`Error occurred: ${err}`)
+            }
+            console.log(connection.state, resp)
+            console.log(`Your Item has been added!`)                    
+        });
+    }
     connection.end()
 }
 
 async function runSalesMetrics() {
     await makeConnection();
     await getItems();
+    var choice = await salesViewOption();
+    if (choice === 'View Product Sales by Department') {
+        connection.query(`SELECT p.department_name AS "Department Name", d.over_head_costs AS "Overhead Costs" , sum(a.price * a.stock_quantity) AS "Profit", sum(a.price * a.stock_quantity) - d.over_head_costs AS "Net Profit"
+            FROM bamazon.product_sales a
+                JOIN bamazon.products p ON p.productsID = a.productsID
+                JOIN bamazon.departments d ON d.department_name = p.department_name
+            Group By p.department_name;`, function(err, resp) {
+            if (err) throw err;
+    
+            for (let i of resp){
+                productSales.push(i)
+            }
+            console.clear()
+            console.table(productSales)
+        })
+    }
+    else if (choice === 'Create New Department') {
+        console.log(`Remaining`)
+    }
     connection.end()
 }
-
-
-
+// productSales = []
+function salesViewOption() {
+    return new Promise(resolve => {
+        inquire.prompt([{
+            type: 'list',
+            name: 'choice',
+            message: "Please select one of the options below:\n",
+            choices: ['View Product Sales by Department', 'Create New Department']
+        }]).then((answer) => {
+            resolve(answer.choice)
+        })
+    })
+}
 
 whatToDo();
-// runMakePurchase()
-
-//     console.log(resp)
-// })
