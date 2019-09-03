@@ -86,4 +86,13 @@ VALUES ('Oral Hygiene Products', '75');
 INSERT INTO departments (department_name, over_head_costs) 
 VALUES ('Office Supplies', '50');
 
+CREATE TABLE userpass (
+  id INT NOT NULL AUTO_INCREMENT,
+  username INT NOT NULL,
+  pw INT NOT NULL,
+  date_added datetime default current_timestamp,
+  PRIMARY KEY (id)
+);
+
+
 

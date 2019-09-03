@@ -17,6 +17,57 @@ var productSales = []
 var productID = 0
 var purchaseQuantity = 0
 
+function authenticateIdentity() {
+    inquire.prompt([
+        {
+            type: 'list',
+            name: 'userInfo',
+            message: "Hi there, are you a new or returning user?",
+            choices: ['New User', 'Returning User']
+        },
+        {
+            message: 'Please input your Username:\n',
+            type: 'input',
+            name : 'username'
+        },
+        {
+            message: 'Please input your Password:\n',
+            type: 'password',
+            name: 'password',
+            mask : '*'
+        }]).then(answers => {
+            let selection = answers.userInfo
+            let username = answers.username
+            let password = answers.password
+    
+            if (selection === 'New User') {
+                connection.query('INSERT INTO bamazon.userpass (username, pw) VALUES (?, ?);', [username, password], (err, resp) =>{
+                    if (err) {
+                        throw err
+                    }
+                    console.log(`Thanks for joining ${username}!\n`)
+                    whatToDo();
+                    // connection.end()
+                })
+            }
+            else if (selection === 'Returning User') {
+                connection.query(`SELECT IF( EXISTS(SELECT * FROM bamazon.userpass WHERE username = ? and pw = ?), 1, 0) AS 'Exist';`, [username, password], (err, resp) => {
+                    if (err) {
+                        throw err
+                    }
+                    let exist = resp[0].Exist
+                    if (exist === 1) {
+                        console.log(`Welcome back ${username}!\n`)
+                        whatToDo();
+                    }
+                    else {
+                        console.log(`Your username and/or password does not exist in my database. Please try selecting the "New User" option. \n`)
+                        authenticateIdentity();
+                    }                    
+                })    
+            }            
+    })
+}
 
 function whatToDo() {
     inquire.prompt({
@@ -33,6 +84,23 @@ function whatToDo() {
         }
         else if (answer.do === 'Sales Metrics') {
             runSalesMetrics();
+        }
+    })
+}
+
+function tryAgain() {
+    inquire.prompt({
+        name : 'again',
+        type: 'confirm',
+        message: 'Would you like to perform another action?',
+        default: false
+    }).then((resp) => {
+        if (resp.again) {
+            whatToDo();
+        }
+        else {
+            console.log(`Thank you for your time and business, please come again!`)
+            connection.end();
         }
     })
 }
@@ -137,7 +205,9 @@ function getItems () {
     return new Promise(resolve => {
         connection.query(`Select productsid AS "ProductsID", products_name AS "Name", price AS "Price", stock_quantity AS "Stock" from bamazon.products;`, function(err, resp) {
             if (err) throw err;
-    
+            products = []
+            productsPrompt = []
+            productsNameStock = []
             for (let i of resp){
                 products.push(i)
                 productsPrompt.push(`Product#${i.ProductsID}: '${i.Name}' is on sale at a price of \$${i.Price}. Only ${i.Stock} units remain!`)
@@ -202,9 +272,45 @@ function placeOrder() {
     })
 }
 
+function salesViewOption() {
+    return new Promise(resolve => {
+        inquire.prompt([{
+            type: 'list',
+            name: 'choice',
+            message: "Please select one of the options below:\n",
+            choices: ['View Product Sales by Department', 'Create New Department']
+        }]).then((answer) => {
+            resolve(answer.choice)
+        })
+    })
+}
+
+function getDepartmentInfo() {
+    return new Promise (resolve => {
+        inquire.prompt([{
+            name: 'department',
+            type: 'input',
+            message: `Please enter the name of the Department:\n`
+        },
+        {
+            name: 'overhead',
+            type: 'number',
+            message: `Please enter the amount of estimated overhead for the Department:\n`,
+            validate: function(answer) {
+                if (answer > 0) {
+                    return true
+                }
+                return `Please select a valid number to restock the item by.`
+            }  
+        }]).then((answers) => {
+            resolve([answers.department, answers.overhead])
+        })
+    })
+}
+
 async function runMakePurchase() {
     try {
-        await makeConnection();
+        //await makeConnection();
         await getItems();
         var choice = await userSelection();
         productID = parseInt(choice.match("Product#(.*):")[1])
@@ -212,7 +318,7 @@ async function runMakePurchase() {
         purchaseQuantity = await howManyBuy()
         await placeOrder();
         // console.log(`this runs last`)
-        connection.end()
+        setTimeout(() => {tryAgain();}, 100)
     }
     catch (e) {
         console.error(`An error has occurred: ${e}`)
@@ -220,7 +326,7 @@ async function runMakePurchase() {
 }
 
 async function runManagerDashboard() {
-    await makeConnection();
+    //await makeConnection();
     await getItems();
     var action = await promptViews();
     if (action[0] === 'update') {
@@ -240,45 +346,41 @@ async function runManagerDashboard() {
             console.log(`Your Item has been added!`)                    
         });
     }
-    connection.end()
+    setTimeout(() => {tryAgain();}, 100)
 }
 
 async function runSalesMetrics() {
-    await makeConnection();
+    //await makeConnection();
     await getItems();
     var choice = await salesViewOption();
     if (choice === 'View Product Sales by Department') {
-        connection.query(`SELECT p.department_name AS "Department Name", d.over_head_costs AS "Overhead Costs" , sum(a.price * a.stock_quantity) AS "Profit", sum(a.price * a.stock_quantity) - d.over_head_costs AS "Net Profit"
+        connection.query(`SELECT d.department_name AS "Department Name", d.over_head_costs AS "Overhead Costs" , sum(a.price * a.stock_quantity) AS "Profit", sum(a.price * a.stock_quantity) - d.over_head_costs AS "Net Profit"
             FROM bamazon.product_sales a
                 JOIN bamazon.products p ON p.productsID = a.productsID
-                JOIN bamazon.departments d ON d.department_name = p.department_name
+                RIGHT JOIN bamazon.departments d ON d.department_name = p.department_name
             Group By p.department_name;`, function(err, resp) {
             if (err) throw err;
-    
+            
+            productSales = []
             for (let i of resp){
                 productSales.push(i)
             }
             console.clear()
-            console.table(productSales)
+            console.table(productSales)      
         })
     }
     else if (choice === 'Create New Department') {
-        console.log(`Remaining`)
-    }
-    connection.end()
-}
-// productSales = []
-function salesViewOption() {
-    return new Promise(resolve => {
-        inquire.prompt([{
-            type: 'list',
-            name: 'choice',
-            message: "Please select one of the options below:\n",
-            choices: ['View Product Sales by Department', 'Create New Department']
-        }]).then((answer) => {
-            resolve(answer.choice)
+        resp = await getDepartmentInfo();
+        connection.query(`INSERT INTO bamazon.departments (department_name, over_head_costs) VALUES (?, ?);`, [resp[0], resp[1]], function(err, resp) {
+            if (err) throw err;
+            console.log(`Your department was added!`)
         })
-    })
+    }
+    
+    setTimeout(() => {tryAgain();}, 100)
 }
 
-whatToDo();
+authenticateIdentity();
+
+// whatToDo();
+
