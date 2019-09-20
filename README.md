@@ -34,8 +34,6 @@ Note: type `node bamazonManager.js` to access the manager portal
 ___
 
 
-___
-
 ## Technologies Used
 * JavaScript
 *  [Node JS](https://nodejs.org/en/download/)
