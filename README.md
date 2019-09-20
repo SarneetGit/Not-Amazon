@@ -14,6 +14,12 @@ THe command line storefront comes with three main functionalities:
 
 ___
 
+# Demo
+
+<img src="./media/Demo_Not-Amazon.gif">
+
+___
+
 ## Setup
 To run this application, you will need [MySQL](https://dev.mysql.com/doc/refman/5.6/en/installing.html) and [Node JS](https://nodejs.org/en/download/) installed on your computer.
 
@@ -44,8 +50,3 @@ ___
 	- [chalk](https://www.npmjs.com/package/chalk)
 	- [cli-table](https://www.npmjs.com/package/cli-table)
 
-___
-
-# Demo
-
-<img src="./media/Demo_Not-Amazon.gif">
